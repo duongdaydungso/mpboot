@@ -4,18 +4,20 @@
 #include "parstree.h"
 
 void test(Params &params){
-	testWeightedParsimony(params);
+	//testWeightedParsimony(params);
 	// testTreeConvertTaxaToID(params);
-    if(params.remove_dup_seq){
-        testRemoveDuplicateSeq(params);
-        cout << "\nDONE testRemoveDuplicateSeq(). Check output at " << params.user_file << ".\n\n";
-        cout << "NOTE: If you want to remove duplicate sequences for MPBoot search algorithm, "
-            << "the correct command is: \n"
-            << "./mpboot -s " << params.aln_file << " -test_mode -remove_dup_seq " << params.user_file << "\n\n";
-        cout << "NOTE: If you want to remove duplicate sequences for MPBoot bootstrap approximation algorithm, "
-            << "the correct command is: \n"
-            << "./mpboot -s " << params.aln_file << " -test_mode -bb 1000 -remove_dup_seq " << params.user_file << "\n\n";
-    }
+    // if(params.remove_dup_seq){
+    //     testRemoveDuplicateSeq(params);
+    //     cout << "\nDONE testRemoveDuplicateSeq(). Check output at " << params.user_file << ".\n\n";
+    //     cout << "NOTE: If you want to remove duplicate sequences for MPBoot search algorithm, "
+    //         << "the correct command is: \n"
+    //         << "./mpboot -s " << params.aln_file << " -test_mode -remove_dup_seq " << params.user_file << "\n\n";
+    //     cout << "NOTE: If you want to remove duplicate sequences for MPBoot bootstrap approximation algorithm, "
+    //         << "the correct command is: \n"
+    //         << "./mpboot -s " << params.aln_file << " -test_mode -bb 1000 -remove_dup_seq " << params.user_file << "\n\n";
+    // } 
+
+	testFitchParsimony(params);
 }
 
 // -s <alnfile> -test_mode <treefile> -cost <costfile>
@@ -61,6 +63,31 @@ void testWeightedParsimony(Params &params){
 //	delete iqtree;
 //	delete iqtree2;
 
+}
+
+// -s <alnfile> -test_mode <treefile>
+void testFitchParsimony(Params &params){
+	// read aln
+	Alignment alignment(params.aln_file, params.sequence_type, params.intype);
+
+	// initialize an ParsTree instance connecting with the alignment
+	IQTree * ptree = new IQTree(&alignment);
+
+	// read in a tree from user's file
+	ptree->readTree(params.user_file, params.is_rooted);
+	ptree->setAlignment(&alignment);
+
+    // string out_file;
+    // out_file = params.user_file;
+    // out_file += ".id";
+
+	// ptree->printTree(out_file.c_str(), WT_TAXON_ID | WT_SORT_TAXA);
+	// cout << "Please see result in " << out_file << endl;
+
+	cout << ptree->PhyloTree::computeParsimony() << endl;
+	cout << "Success" << endl; 
+
+	delete ptree;
 }
 
 // -s <alnfile> -test_mode <treefile>
