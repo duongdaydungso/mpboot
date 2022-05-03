@@ -4813,6 +4813,174 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
 }
 
 /****************************************************************************
+                Ancestral Sequence Reconstruction
+****************************************************************************/
+
+void PhyloTree::upwardPhaseComputeAncestralSequences(PhyloNode *node, PhyloNode *dad) {
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        upwardPhaseComputeAncestralSequences((PhyloNode *) (*it)->node, node);
+    }
+    
+    int nptn = getAlnNPattern();
+    int nodeId = node->id;
+
+    if (node->isLeaf() && dad) {
+        // External node
+        for (int ptn = 0; ptn < nptn; ptn ++) {
+            int state = (aln->at(ptn))[nodeId];
+
+            ptn_ancestral_seq[nodeId * nptn + ptn] = (1 << state);
+        }
+    } else {
+        // Internal node
+        if (node->id != leafNum) {
+            // For internal node except startNode
+            
+            FOR_NEIGHBOR_IT(node, dad, it) {
+                PhyloNode *childNode = (PhyloNode *) (*it)->node;
+                int childId = childNode->id;
+
+                for (int ptn = 0; ptn < nptn; ptn ++) {
+                    UINT *nodeState = &ptn_ancestral_seq[nodeId * nptn + ptn];
+                    UINT *childState = &ptn_ancestral_seq[childId * nptn + ptn];
+
+                    if ((*nodeState) & (*childState)) {
+                        (*nodeState) &= (*childState);
+                    } else {
+                        (*nodeState) |= (*childState);
+                    }
+                }
+            }
+        } else {
+            // For startNode
+
+            // A unrooted binary tree that is rooted on an arbitrary internal node has exactly 
+            // three immediate descendant nodes for the root node, and each other internal node 
+            // has exactly two immediate descendant nodes.
+            assert(node->neighbors.size() == 3); 
+
+            for (int ptn = 0; ptn < nptn; ptn ++) {
+                UINT *nodeState = &ptn_ancestral_seq[nodeId * nptn + ptn];
+                UINT **childState = aligned_alloc<UINT*>(3);
+
+                for (int i = 0; i < 3; i ++) {
+                    childState[i] = &ptn_ancestral_seq[(node->neighbors[i]->node->id)* nptn + ptn];
+                }
+
+                if ((*childState[0] & *childState[1]) & *childState[2]) {
+                    // 3 child have same state
+                    *nodeState = (*childState[0] & *childState[1]) & *childState[2];
+                } else {
+                    if (((*childState[0] & *childState[1]) | (*childState[0] & *childState[2])) | (*childState[1] & *childState[2])) {
+                        // 2 child have same state
+                        *nodeState = ((*childState[0] & *childState[1]) | (*childState[0] & *childState[2])) | (*childState[1] & *childState[2]);
+                    } else {
+                        // no child has same state
+                        *nodeState = (*childState[0] | *childState[1]) | *childState[2];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PhyloTree::downwardPhaseComputeAncestralSequences(PhyloNode *node, PhyloNode *dad) {
+    int nptn = getAlnNPattern();
+    int nodeId = node->id;
+    int dadId = (dad) ? (dad->id) : (-1);
+
+    for (int ptn = 0; ptn < nptn; ptn ++) {
+        UINT temp;
+
+        if ((dadId != -1) && (ptn_ancestral_seq[dadId * nptn + ptn] & ptn_ancestral_seq[nodeId * nptn + ptn])) {
+            temp = ptn_ancestral_seq[dadId * nptn + ptn] & ptn_ancestral_seq[nodeId * nptn + ptn];
+        } else {
+            temp = ptn_ancestral_seq[nodeId * nptn + ptn];
+        }
+
+        ptn_ancestral_seq[nodeId * nptn + ptn] = temp & (-temp);
+    }
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        downwardPhaseComputeAncestralSequences((PhyloNode *) (*it)->node, node);
+    }
+}
+
+void PhyloTree::writeAncestralSequences(ostream &out, PhyloNode *node, PhyloNode *dad) {
+    if (node->name.empty() || !isalpha(node->name[0])) {
+        node->name = "Node" + convertIntToString(node->id-this->leafNum+1);
+    }
+
+    // Newick format
+
+    if (node->isLeaf()) {
+        // External Node
+        out << node->name << ":";
+    } else {
+        // Internal Node
+        out << "(";
+
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            if (it != node->neighbors.begin()) {
+                out << ",";
+            }
+
+            writeAncestralSequences(out, (PhyloNode *) (*it)->node, node);
+        }
+
+        out << ")" << node->name << ":";
+    }
+
+    // Print sequences
+    int nptn = getAlnNPattern();
+    int nsites = aln->getNSite();
+    int nodeId = node->id;
+
+    for (int site = 0; site < nsites; site++) {
+        int ptn = aln->getPatternID(site);
+
+       out << aln->convertStateBackStr(__builtin_popcount(ptn_ancestral_seq[nodeId * nptn + ptn] - 1)); 
+    }
+}
+
+void PhyloTree::restructureAncestralSequences(const char *out_file) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(out_file);
+
+        // *********** Initialization ************
+        size_t nptn = getAlnNPattern();
+        size_t nnode = nodeNum;
+
+        ptn_ancestral_seq = aligned_alloc<UINT>(nnode*nptn);
+        memset(ptn_ancestral_seq, 0, sizeof(UINT)*nnode*nptn);
+
+        assert(root->isLeaf());
+        PhyloNode *startNode = (PhyloNode*) root->neighbors[0]->node;
+        assert(startNode);
+        assert(startNode->id == leafNum); // Assuming startNode id is the first number after last leaf id (id count from 0)
+
+        // *************** Computing ***************
+        upwardPhaseComputeAncestralSequences(startNode, NULL);
+        downwardPhaseComputeAncestralSequences(startNode, NULL);
+
+        // *************** Exporting ***************
+        writeAncestralSequences(out, startNode, NULL);    
+        out << ";";
+
+        // *****************************************
+        aligned_free(ptn_ancestral_seq);
+
+        out.close();
+
+	    cout << "Result in " << out_file << endl;
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, out_file);
+    }
+}
+
+/****************************************************************************
  Collapse stable (highly supported) clades by one representative
  ****************************************************************************/
 
@@ -5032,3 +5200,4 @@ void PhyloTree::printTransMatrices(Node *node, Node *dad) {
     }
     FOR_NEIGHBOR_IT(node, dad, it)printTransMatrices((*it)->node, node);
 }
+

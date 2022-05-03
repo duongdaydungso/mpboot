@@ -1164,7 +1164,6 @@ public:
 
     void regraftSubtree(PruningInfo &info,
             PhyloNode *in_node, PhyloNode *in_dad);
-
     /****************************************************************************
             Approximate Likelihood Ratio Test with SH-like interpretation
      ****************************************************************************/
@@ -1192,6 +1191,45 @@ public:
     int testAllBranches(int threshold,
             double best_score, double *pattern_lh, int reps, int lbp_reps,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+
+    /****************************************************************************
+                Ancestral Sequence Reconstruction
+    ****************************************************************************/
+    // Pattern ancestral sequences.
+    UINT *ptn_ancestral_seq;
+
+    /**
+     * Upward phase of computing ancestral sequences.  
+     * 
+     * @param node current node in DFS
+     * @param dad dad of current node
+     */
+    void upwardPhaseComputeAncestralSequences(PhyloNode *node, PhyloNode *dad);
+
+    /**
+     * Downward phase of computing ancestral sequences.  
+     * 
+     * @param node current node in DFS
+     * @param dad dad of current node
+     */        
+    void downwardPhaseComputeAncestralSequences(PhyloNode *node, PhyloNode *dad);
+
+    /**
+     * Writing ancestral sequences in Newick format.  
+     * 
+     * @param out outfile
+     * @param node current node in DFS
+     * @param dad dad of current node
+     */
+    void writeAncestralSequences(ostream &out, PhyloNode *node, PhyloNode *dad);
+    
+    /**
+     * Reconstruct ancestral sequences from a giving tree and alignment, then exort it to output file.
+     * 
+     * @param out_file output file
+     */
+    void restructureAncestralSequences(const char *out_file);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
