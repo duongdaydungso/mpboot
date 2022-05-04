@@ -15,6 +15,5 @@ void testWeightedParsimony(Params &params);
 void testTreeConvertTaxaToID(Params &params);
 void testRemoveDuplicateSeq(Params &params);
 void testFitchParsimony(Params &params);
-void testASR(Params &params);
 
 #endif /* SOURCE_DIRECTORY__TEST_H_ */

@@ -1539,6 +1539,29 @@ void computeRFDist(Params &params) {
 	delete [] rfdist;
 }
 
+/** Using for exporting Ancestral Sequences to file ".state" 
+ * Syntax: -s <aln_file> -asr <tree_file>
+*/
+void exportAncestralSequences(Params &params) {
+	// read aln
+	Alignment alignment(params.aln_file, params.sequence_type, params.intype);
+
+	// initialize an ParsTree instance connecting with the alignment
+	IQTree * ptree = new IQTree(&alignment);
+
+	// read in a tree from user's file
+	ptree->readTree(params.user_file, params.is_rooted);
+	ptree->setAlignment(&alignment);
+
+	string out_file;
+    out_file = params.out_prefix;
+    out_file += ".state";
+	
+	ptree->restructureAncestralSequences(out_file.c_str());
+
+	delete ptree;
+}
+
 
 void testInputFile(Params &params) {
 	SplitGraph sg(params);
@@ -2334,6 +2357,8 @@ int main(int argc, char *argv[])
 		printSiteParsimonyUserTree(params);
 	} else if (params.compute_parsimony) {
 		computeUserTreeParsimomy(params);
+	} else if (params.ASR_using_MPR) {
+		exportAncestralSequences(params);
 	}
 	else if (params.newick_to_tnt) {
 		convertNewickToTnt(params);

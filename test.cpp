@@ -17,7 +17,7 @@ void test(Params &params){
     //         << "./mpboot -s " << params.aln_file << " -test_mode -bb 1000 -remove_dup_seq " << params.user_file << "\n\n";
     // } 
 
-	testASR(params);
+	testFitchParsimony(params);
 }
 
 // -s <alnfile> -test_mode <treefile> -cost <costfile>
@@ -139,24 +139,4 @@ void testRemoveDuplicateSeq(Params &params){
 	}
     aln->printPhylip(params.user_file);
     delete aln;
-}
-
-void testASR(Params &params) {
-	// read aln
-	Alignment alignment(params.aln_file, params.sequence_type, params.intype);
-
-	// initialize an ParsTree instance connecting with the alignment
-	IQTree * ptree = new IQTree(&alignment);
-
-	// read in a tree from user's file
-	ptree->readTree(params.user_file, params.is_rooted);
-	ptree->setAlignment(&alignment);
-
-	string out_file;
-    out_file = params.out_prefix;
-    out_file += ".state";
-	
-	ptree->restructureAncestralSequences(out_file.c_str());
-
-	delete ptree;
 }

@@ -804,6 +804,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.top_boot_concensus = false;
     params.do_first_rell = false;
     params.remove_dup_seq = false;
+	params.ASR_using_MPR = false;
     params.test_mode = false;
 
 #ifdef _OPENMP
@@ -2569,6 +2570,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lsnni") == 0) {
 				params.leastSquareNNI = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-asr") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -asr <treefile>";
+				params.ASR_using_MPR = true;
+
+				//if (params.user_file == NULL)
+                params.user_file = argv[cnt];
+
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsvar") == 0) {
