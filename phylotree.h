@@ -1198,6 +1198,9 @@ public:
     ****************************************************************************/
     // Pattern ancestral sequences.
     UINT *ptn_ancestral_seq;
+    
+    // Root node of tree under consideration
+    PhyloNode *startNode;
 
     /**
      * Upward phase of computing ancestral sequences.  
@@ -1229,7 +1232,7 @@ public:
      * 
      * @param out_file output file
      */
-    void restructureAncestralSequences(const char *out_file);
+    void reconstructAncestralSequences(const char *out_file);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

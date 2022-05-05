@@ -4833,8 +4833,8 @@ void PhyloTree::upwardPhaseComputeAncestralSequences(PhyloNode *node, PhyloNode 
         }
     } else {
         // Internal node
-        if (node->id != leafNum) {
-            // For internal node except startNode
+        if (node != startNode || startNode->neighbors.size() < 3) {
+            // For internal node except startNode (if tree is unrooted tree)
             
             FOR_NEIGHBOR_IT(node, dad, it) {
                 PhyloNode *childNode = (PhyloNode *) (*it)->node;
@@ -4943,7 +4943,7 @@ void PhyloTree::writeAncestralSequences(ostream &out, PhyloNode *node, PhyloNode
     }
 }
 
-void PhyloTree::restructureAncestralSequences(const char *out_file) {
+void PhyloTree::reconstructAncestralSequences(const char *out_file) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -4956,10 +4956,9 @@ void PhyloTree::restructureAncestralSequences(const char *out_file) {
         ptn_ancestral_seq = aligned_alloc<UINT>(nnode*nptn);
         memset(ptn_ancestral_seq, 0, sizeof(UINT)*nnode*nptn);
 
-        assert(root->isLeaf());
-        PhyloNode *startNode = (PhyloNode*) root->neighbors[0]->node;
+        startNode = (PhyloNode*) findNodeID(leafNum);
+
         assert(startNode);
-        assert(startNode->id == leafNum); // Assuming startNode id is the first number after last leaf id (id count from 0)
 
         // *************** Computing ***************
         upwardPhaseComputeAncestralSequences(startNode, NULL);
@@ -4969,8 +4968,10 @@ void PhyloTree::restructureAncestralSequences(const char *out_file) {
         writeAncestralSequences(out, startNode, NULL);    
         out << ";";
 
-        // *****************************************
+        // **************** Free ********************
         aligned_free(ptn_ancestral_seq);
+
+        startNode = NULL;
 
         out.close();
 

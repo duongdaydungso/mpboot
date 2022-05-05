@@ -1550,14 +1550,18 @@ void exportAncestralSequences(Params &params) {
 	IQTree * ptree = new IQTree(&alignment);
 
 	// read in a tree from user's file
-	ptree->readTree(params.user_file, params.is_rooted);
+	bool rooted = false;
+
+	ptree->readTree(params.user_file, rooted);
 	ptree->setAlignment(&alignment);
 
+	// out file
 	string out_file;
     out_file = params.out_prefix;
     out_file += ".state";
 	
-	ptree->restructureAncestralSequences(out_file.c_str());
+	// reconstruct
+	ptree->reconstructAncestralSequences(out_file.c_str());
 
 	delete ptree;
 }
